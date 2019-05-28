@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sysauto_summary_generator">
+    <sysauto_summary_generator action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <condition/>
+        <conditional>false</conditional>
+        <name>CI Relationship Dot Walking</name>
+        <run_as display_value="System Administrator">6816f79cc0a8016401c5a33be04be441</run_as>
+        <run_as_tz/>
+        <run_dayofmonth>1</run_dayofmonth>
+        <run_dayofweek>1</run_dayofweek>
+        <run_period/>
+        <run_start>2019-03-24 21:43:19</run_start>
+        <run_time>1970-01-01 08:00:00</run_time>
+        <run_type>on_demand</run_type>
+        <script><![CDATA[function getDownstreamCIs(id) {
+	/**
+ 	* Return an Array of CIs' sys_id's downstream of a specific target CI.  Also
+	* print a map of the CI tree structure downstream of the specific target CI
+	* in the format:
+	*       [Ln] child (class)
+	*  where:
+	*     n = Level in the hierarchy of the child CI
+	*     child = Child CI's name
+	*     class = Child CI's class
+ 	*
+ 	* Inputs:
+ 	*    id is the sys_id of a configuration item [cmdb_ci]
+ 	*
+ 	* Returns:
+ 	*    an array of sys_id values for cmdb_ci records downstream of
+ 	*    the input item
+ 	*/
+	var ci = new GlideRecord("cmdb_ci");
+	if (ci.get(id)) {
+		addChildCIs(id, cis, currentDepth);
+	}
+	var svcarr = new Array(); // cis is an Object, convert to Array before returning it
+	for (var i in cis)
+		svcarr.push(i);
+	
+	return svcarr; // list of affected CIs
+}
+
+function addChildCIs(value, cis, currentDepth) {
+	var parent = new GlideRecord('cmdb_ci');
+	parent.get(value);
+	var parentName = parent.name;
+	var parentClass = parent.sys_class_name;
+	
+	if (children[value]) { // already checked downstream of this CI?
+		return;
+	}
+	else children[value] = true;
+		
+	if (added >= maxSize)   // we've hit the max results threshold so don't add
+		return;
+	else {
+		currentDepth++;
+		var indent = "-";
+		for (var lvl = 1; lvl < currentDepth; lvl++)
+			indent = indent + "-";
+		
+		var al = SNC.CMDBUtil.getRelatedRecords(value, "", "cmdb_ci", "cmdb_ci", "parent"); // returns JavaScript ArrayList of the immediate children of the parent
+		if (al.size() > 0) {
+			// first add the unique CI's
+			var kid = new GlideRecord('cmdb_ci');
+			kid.addQuery('sys_id', al);
+			kid.query();
+			while (kid.next()) {
+				var str = kid.sys_id;
+				gs.print("[L"+currentDepth+"] "+kid.name+"("+kid.sys_class_name+")");
+				addCI(str, cis);
+				if (added >= maxSize)
+					return;
+				if (currentDepth < maxDepth)
+					addChildCIs(str, cis, currentDepth);
+			}
+		}
+	}
+}
+
+function addCI(id, cis) {
+	cis[id] = true;
+	added++;
+}
+
+try {
+	maxDepth = gs.getProperty('glide.relationship.max_depth',100);  // how deep to look in the hierarchy
+	maxSize = gs.getProperty('glide.relationship.threshold',1000);  // limit number of results
+	cis = new Object();  // CIs found downstream
+	children = new Object();   // already checked children
+	currentDepth = 0;
+	added = 0;
+	
+	var targetCI = '451047c6c0a8016400de0ae6df9b9d76'; // Top-level starting point
+	var walkResults = getDownstreamCIs(targetCI);
+}
+
+catch(err) {
+	gs.log("Error in script: " + err);
+}
+]]></script>
+        <summary/>
+        <sys_class_name>sysauto_summary_generator</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-03-24 21:45:12</sys_created_on>
+        <sys_id>a43276cfdb1033009aeaa455ca9619b7</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>CI Relationship Dot Walking</sys_name>
+        <sys_package display_value="NeedIt" source="x_58872_needit">6ead8e780f603200cd674f8ce1050ed1</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="NeedIt">6ead8e780f603200cd674f8ce1050ed1</sys_scope>
+        <sys_update_name>sysauto_summary_generator_a43276cfdb1033009aeaa455ca9619b7</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-03-24 21:45:12</sys_updated_on>
+        <upgrade_safe>false</upgrade_safe>
+    </sysauto_summary_generator>
+</record_update>
